@@ -277,7 +277,7 @@ void encryption(unsigned char *text, unsigned char *key)
 
     for (int i = 1; i <= ROUND; i++)
     {
-        cout <<"Round " << i << " : " << endl;
+        cout << "Round " << i << " : " << endl;
 
         substitute_byte(text);
         cout << "Substitute bytes: ";
@@ -287,7 +287,8 @@ void encryption(unsigned char *text, unsigned char *key)
         cout << "Shift rows: ";
         state_print(text);
 
-        if (i != ROUND){
+        if (i != ROUND)
+        {
             mix_column(text);
             cout << "Mix columns: ";
             state_print(text);
@@ -299,13 +300,99 @@ void encryption(unsigned char *text, unsigned char *key)
     }
 }
 
+// decryption
+
+void add_round_key_decryption(unsigned char *state, int round)
+{
+    for (int i = 0; i < 16; i++)
+        state[i] ^= extended_key[160 - round * 16 + i];
+}
+
+void inv_substitute_byte(unsigned char *state)
+{
+    int i;
+    for (i = 0; i < 16; i++)
+    {
+        state[i] = inverse_sbox[state[i]];
+    }
+}
+
+void inverse_shift_row(unsigned char *state)
+{
+    unsigned char temp[16];
+
+    temp[0] = state[0];
+    temp[4] = state[4];
+    temp[8] = state[8];
+    temp[12] = state[12];
+
+    temp[5] = state[1];
+    temp[9] = state[5];
+    temp[13] = state[9];
+    temp[1] = state[13];
+
+    temp[10] = state[2];
+    temp[14] = state[6];
+    temp[2] = state[10];
+    temp[6] = state[14];
+
+    temp[15] = state[3];
+    temp[3] = state[7];
+    temp[7] = state[11];
+    temp[11] = state[15];
+
+    for (int i = 0; i < 16; i++)
+        state[i] = temp[i];
+}
+
+void inverse_mix_column(unsigned char *state)
+{
+    unsigned char temp[16];
+    for (int i = 0; i < 16; i++)
+    {
+        if (i % 4 == 0)
+            temp[i] = Table14[state[i]] ^ Table11[state[i + 1]] ^ Table13[state[i + 2]] ^ Table9[state[i + 3]];
+        if (i % 4 == 1)
+            temp[i] = Table14[state[i]] ^ Table11[state[i + 1]] ^ Table13[state[i + 2]] ^ Table9[state[i - 1]];
+        if (i % 4 == 2)
+            temp[i] = Table14[state[i]] ^ Table11[state[i + 1]] ^ Table13[state[i - 2]] ^ Table9[state[i - 1]];
+        if (i % 4 == 3)
+            temp[i] = Table14[state[i]] ^ Table11[state[i - 3]] ^ Table13[state[i - 2]] ^ Table9[state[i - 1]];
+    }
+    for (int i = 0; i < 16; i++)
+        state[i] = temp[i];
+}
+
+void decryption(unsigned char *text, unsigned char *key)
+{
+    add_round_key_decryption(text, 0);
+
+    for (int i = 1; i <= ROUND; i++)
+    {
+
+        inverse_shift_row(text);
+        inv_substitute_byte(text);
+        add_round_key_decryption(text, i);
+        if (i != ROUND)
+            inverse_mix_column(text);
+    }
+}
+
 int main()
 {
     unsigned char plainText[] = "Two One Nine Two";
+    string decrypted;
     unsigned char key[] = "Thats my Kung Fu";
 
     encryption(plainText, key);
     cout << "Cypher Text: ";
     state_print(plainText);
+
+    decryption(plainText, key);
+    cout << "Plain Text: ";
+    for (int i = 0; i < sizeof(plainText)-1; i++)
+    {
+        printf("%c",plainText[i]);
+    }
     
 }
